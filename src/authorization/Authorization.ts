@@ -7,8 +7,10 @@ export class Authorization {
   static client: JwksClient;
   static issuer: string;
   static audience: string;
+  static createUserToken: string;
 
-  constructor(issuer: string, audience: string) {
+  constructor(issuer: string, audience: string, createUserToken: string) {
+    Authorization.createUserToken = createUserToken;
     Authorization.issuer = issuer;
     Authorization.audience = audience;
     Authorization.client = jwksClient({
@@ -61,12 +63,35 @@ export class Authorization {
       return res.redirect("/401");
     }
 
-    req.roles = payload?.[`${Authorization.audience}/roles`] ?? [];
+    req.userInfo = {
+      oauthId: payload?.sub ?? "",
+      roles: payload?.[`${Authorization.audience}roles`] ?? [],
+    };
 
     return next();
   };
 
   static isAdmin = (roles?: string[]) => {
-    return roles?.includes("admin");
+    return roles?.includes("client");
+  };
+
+  static isCurrentUser = (tokenId?: string, databaseId?: string) => {
+    return tokenId === databaseId;
+  };
+
+  static hasUserAccess = (
+    roles?: string[],
+    tokenId?: string,
+    databaseId?: string
+  ) => {
+    if (Authorization.isAdmin(roles)) return true;
+    console.log("tokenId", tokenId, databaseId);
+    return this.isCurrentUser(tokenId, databaseId);
+  };
+
+  static canCreateUser = (req: Request, res: Response, next: NextFunction) => {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (token !== Authorization.createUserToken) return res.redirect("/401");
+    return next();
   };
 }

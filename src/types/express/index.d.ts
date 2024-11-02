@@ -4,7 +4,10 @@ export {};
 declare global {
   namespace Express {
     export interface Request {
-      roles?: string[];
+      userInfo?: {
+        oauthId: string;
+        roles: string[];
+      };
     }
   }
 }
